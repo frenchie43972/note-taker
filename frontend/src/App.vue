@@ -4,6 +4,9 @@ import { getNotes, createNote, deleteNote, updateNote } from './api/notes'
 
 const notes = ref([])
 
+const loading = ref(false)
+const error = ref(null)
+
 const title = ref('')
 const body = ref('')
 
@@ -19,24 +22,33 @@ async function handleDeleteNote(id) {
 }
 
 async function handleSubmit() {
-  if (editingId.value === null) {
-    const newNote = await createNote({
-      title: title.value,
-      body: body.value,
-    })
-    notes.value.push(newNote)
-  } else {
-    const updatedNote = await updateNote(editingId.value, {
-      title: title.value,
-      body: body.value,
-    })
+  loading.value = true
+  error.value = null
 
-    notes.value = notes.value.map((note) => {
-      return note.id === editingId.value ? updatedNote : note
-    })
+  try {
+    if (editingId.value === null) {
+      const newNote = await createNote({
+        title: title.value,
+        body: body.value,
+      })
+      notes.value.push(newNote)
+    } else {
+      const updatedNote = await updateNote(editingId.value, {
+        title: title.value,
+        body: body.value,
+      })
+
+      notes.value = notes.value.map((note) => {
+        return note.id === editingId.value ? updatedNote : note
+      })
+    }
+
+    resetForm()
+  } catch (err) {
+    error.value = err.message || 'Something went wrong'
+  } finally {
+    loading.value = false
   }
-
-  resetForm()
 }
 
 function startEdit(note) {
@@ -66,9 +78,13 @@ function resetForm() {
     <p v-else>No Notes Found.</p>
   </div>
   <hr />
+  <p v-if="error">{{ error }}</p>
   <form @submit.prevent="handleSubmit">
     <input v-model="title" placeholder="Add Title..." />
     <textarea v-model="body" placeholder="Add Note..."></textarea>
+
+    <p v-if="loading">Saving...</p>
+
     <button type="submit">Save</button>
   </form>
 </template>
