@@ -1,61 +1,75 @@
 <script setup>
 import { ref, onMounted } from 'vue'
+import { getNotes, createNote, deleteNote, updateNote } from './api/notes'
 
 const notes = ref([])
+
 const title = ref('')
-const content = ref('')
+const body = ref('')
+
+const editingId = ref(null)
 
 onMounted(async () => {
-  const res = await fetch('http://localhost:3000/notes')
-
-  notes.value = await res.json()
+  notes.value = await getNotes()
 })
 
-async function createNote() {
-  if (!title.value || !content.value) return
-
-  const res = await fetch('http://localhost:3000/notes', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      title: title.value,
-      content: content.value,
-    }),
-  })
-
-  const newNote = await res.json()
-  notes.value.unshift(newNote)
-
-  title.value = ''
-  content.value = ''
+async function handleDeleteNote(id) {
+  await deleteNote(id)
+  notes.value = notes.value.filter((note) => note.id !== id)
 }
 
-async function deleteNote(id) {
-  await fetch(`http://localhost:3000/notes/${id}`, {
-    method: 'DELETE',
-  })
+async function handleSubmit() {
+  if (editingId.value === null) {
+    const newNote = await createNote({
+      title: title.value,
+      body: body.value,
+    })
+    notes.value.push(newNote)
+  } else {
+    const updatedNote = await updateNote(editingId.value, {
+      title: title.value,
+      body: body.value,
+    })
 
-  notes.value = notes.value.filter((n) => n.id !== id)
+    notes.value = notes.value.map((note) => {
+      return note.id === editingId.value ? updatedNote : note
+    })
+  }
+
+  resetForm()
+}
+
+function startEdit(note) {
+  editingId.value = note.id
+  title.value = note.title
+  body.value = note.body
+}
+
+function resetForm() {
+  editingId.value = null
+  title.value = ''
+  body.value = ''
 }
 </script>
 
 <template>
   <div>
     <h1>Notes</h1>
-    <ul>
+    <ul v-if="notes.length">
       <li v-for="note in notes" :key="note.id">
         <strong>{{ note.title }}</strong>
-        {{ note.content }}
-        <button @click="deleteNote(note.id)">Delete</button>
+        <p>{{ note.body }}</p>
+        <button @click="handleDeleteNote(note.id)">Delete</button>
+        <button @click="startEdit(note)">Edit</button>
       </li>
     </ul>
+    <p v-else>No Notes Found.</p>
   </div>
-  <form @submit.prevent="createNote">
-    <input v-model="title" placeholder="Title" />
-    <br />
-    <textarea v-model="content" placeholder="Note Content"></textarea>
-    <br />
-    <button type="submit">Add Note</button>
+  <hr />
+  <form @submit.prevent="handleSubmit">
+    <input v-model="title" placeholder="Add Title..." />
+    <textarea v-model="body" placeholder="Add Note..."></textarea>
+    <button type="submit">Save</button>
   </form>
 </template>
 
