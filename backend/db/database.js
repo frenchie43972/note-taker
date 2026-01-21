@@ -1,0 +1,37 @@
+import sqlite3 from 'sqlite3';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Determines the absolute path of this file so database paths
+// are reliable regardless of where the server is started from
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Builds and resolves paths so they work no matter where the app is started from
+const dbPath = path.resolve(__dirname, 'notes.sqlite');
+const schemaPath = path.resolve(__dirname, 'schema.sql');
+
+// Open or create the DB
+const db = new sqlite3.Database(dbPath, (err) => {
+  if (err) {
+    console.error('Failed to connect to the DB', err);
+    return;
+  }
+
+  console.log('Database Connected');
+
+  // Reads the schema file from disk
+  const schema = fs.readFileSync(schemaPath, 'utf8');
+
+  // Executes the schema to create the table(s) if they do not exist
+  db.exec(schema, (schemaErr) => {
+    if (schemaErr) {
+      console.error('Failed to apply database schema', schemaErr);
+    } else {
+      console.log('Database schema applied');
+    }
+  });
+});
+
+export default db;
