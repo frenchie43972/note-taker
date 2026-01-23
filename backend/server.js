@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors';
 import router from './routes/notesRouter.js';
 import db from './db/database.js';
 
@@ -9,6 +10,12 @@ const notesRouter = router;
 
 // global middleware
 app.use(express.json());
+
+app.use(
+  cors({
+    origin: 'http://localhost:5173',
+  }),
+);
 
 // mount routes
 app.use('/notes', notesRouter);
