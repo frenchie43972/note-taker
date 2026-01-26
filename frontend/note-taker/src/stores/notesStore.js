@@ -72,5 +72,31 @@ export const useNotesStore = defineStore('notes', {
 
       this.notes = this.notes.filter((note) => note.id !== id)
     },
+
+    /*
+      Edit note by id and update the backend and local state
+    */
+    async editNote(id, title, body) {
+      const response = await fetch(`${API_BASE_URL}/notes/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, body }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update note')
+      }
+
+      // This will read the updated note returned by the backend
+      const updatedNote = await response.json()
+
+      // Find the exisiting note in local store
+      const index = this.notes.findIndex((note) => note.id === id)
+
+      // This will replace the editied note so Vue can re-render it
+      if (index !== -1) {
+        this.notes[index] = updatedNote
+      }
+    },
   },
 })
